@@ -964,6 +964,50 @@ describe("QmdMemoryManager", () => {
     await manager.close();
   });
 
+  it("retries mcporter daemon start after a failure", async () => {
+    cfg = {
+      ...cfg,
+      memory: {
+        backend: "qmd",
+        qmd: {
+          includeDefaultMemory: false,
+          update: { interval: "0s", debounceMs: 60_000, onBoot: false },
+          paths: [{ path: workspaceDir, pattern: "**/*.md", name: "workspace" }],
+          mcporter: { enabled: true, serverName: "qmd", startDaemon: true },
+        },
+      },
+    } as OpenClawConfig;
+
+    let daemonAttempts = 0;
+    spawnMock.mockImplementation((cmd: string, args: string[]) => {
+      const child = createMockChild({ autoClose: false });
+      if (cmd === "mcporter" && args[0] === "daemon") {
+        daemonAttempts += 1;
+        if (daemonAttempts === 1) {
+          emitAndClose(child, "stderr", "failed", 1);
+        } else {
+          emitAndClose(child, "stdout", "");
+        }
+        return child;
+      }
+      if (cmd === "mcporter" && args[0] === "call") {
+        emitAndClose(child, "stdout", JSON.stringify({ results: [] }));
+        return child;
+      }
+      emitAndClose(child, "stdout", "[]");
+      return child;
+    });
+
+    const { manager } = await createManager();
+
+    await manager.search("one", { sessionKey: "agent:main:slack:dm:u123" });
+    await manager.search("two", { sessionKey: "agent:main:slack:dm:u123" });
+
+    expect(daemonAttempts).toBe(2);
+
+    await manager.close();
+  });
+
   it("starts the mcporter daemon only once when enabled", async () => {
     cfg = {
       ...cfg,

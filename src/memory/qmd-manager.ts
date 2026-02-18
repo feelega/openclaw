@@ -828,6 +828,8 @@ export class QmdMemoryManager implements MemorySearchManager {
           await this.runMcporter(["daemon", "start"], { timeoutMs: 10_000 });
         } catch (err) {
           log.warn(`mcporter daemon start failed: ${String(err)}`);
+          // Allow future searches to retry daemon start on transient failures.
+          delete g.__openclawMcporterDaemonStart;
         }
       })();
     }
