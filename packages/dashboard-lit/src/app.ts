@@ -1,8 +1,7 @@
-import { consume } from "@lit/context";
-import { LitElement, html, nothing } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { icon } from "./components/icons.js";
-import { gatewayContext, type GatewayState } from "./context/gateway-context.js";
+import "./components/connection-status.js";
 import {
   normalizeBasePath,
   pathForTab,
@@ -46,9 +45,6 @@ export class DashboardApp extends LitElement {
   override createRenderRoot() {
     return this;
   }
-
-  @consume({ context: gatewayContext, subscribe: true })
-  gateway!: GatewayState;
 
   @state() tab: Tab = "overview";
   @state() basePath = "";
@@ -167,7 +163,6 @@ export class DashboardApp extends LitElement {
   /* ── Render ──────────────────────────────────────── */
 
   override render() {
-    const connected = this.gateway?.connected ?? false;
     const isChat = this.tab === "chat";
 
     return html`
@@ -180,11 +175,7 @@ export class DashboardApp extends LitElement {
               <div class="page-title">${titleForTab(this.tab)}</div>
             </div>
             <div class="topbar-status">
-              <div class="pill ${connected ? "" : "pill--danger"}">
-                <span class="status-dot ${connected ? "status-dot--ok" : ""}"></span>
-                <span>Health</span>
-                <span class="mono">${connected ? "OK" : "Offline"}</span>
-              </div>
+              <connection-status></connection-status>
               <div class="theme-toggle">
                 <button
                   class="theme-btn ${this.theme === "landingTheme" ? "active" : ""}"
@@ -219,18 +210,14 @@ export class DashboardApp extends LitElement {
             .activeTab=${this.tab}
             .basePath=${this.basePath}
             .collapsed=${this.navCollapsed}
-            .version=${this.gateway?.version ?? ""}
+
             @tab-change=${this.handleTabChange}
             @toggle-collapse=${() => this.toggleNav()}
           ></sidebar-nav>
 
           <!-- ─── Main Content ─────────────────────── -->
           <main class="content ${isChat ? "content--chat" : ""}">
-            ${
-              this.gateway?.lastError
-                ? html`<div class="content-error"><div class="pill pill--danger">${this.gateway.lastError}</div></div>`
-                : nothing
-            }
+
             ${this.renderMainContent()}
           </main>
         </div>
