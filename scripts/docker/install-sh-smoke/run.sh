@@ -50,17 +50,48 @@ fi
 echo "==> Run official installer one-liner"
 curl -fsSL "$INSTALL_URL" | bash
 
+resolve_cli_path() {
+  local cli_name="$1"
+  local candidate=""
+
+  candidate="$(command -v "$cli_name" || true)"
+  if [[ -n "$candidate" ]]; then
+    printf "%s" "$candidate"
+    return 0
+  fi
+
+  local npm_prefix=""
+  npm_prefix="$(npm config get prefix 2>/dev/null || true)"
+  if [[ -n "$npm_prefix" && "$npm_prefix" != "undefined" && -x "$npm_prefix/bin/$cli_name" ]]; then
+    printf "%s" "$npm_prefix/bin/$cli_name"
+    return 0
+  fi
+
+  local fallback_bin=""
+  for fallback_bin in /usr/local/bin /usr/bin "$HOME/.npm-global/bin" "$HOME/.local/bin"; do
+    if [[ -x "$fallback_bin/$cli_name" ]]; then
+      printf "%s" "$fallback_bin/$cli_name"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 echo "==> Verify installed version"
 CLI_NAME="$PACKAGE_NAME"
-if ! command -v "$CLI_NAME" >/dev/null 2>&1; then
+CMD_PATH="$(resolve_cli_path "$CLI_NAME" || true)"
+if [[ -z "$CMD_PATH" ]]; then
   echo "ERROR: $PACKAGE_NAME is not on PATH" >&2
+  echo "PATH=$PATH" >&2
+  echo "npm-prefix=$(npm config get prefix 2>/dev/null || true)" >&2
   exit 1
 fi
 if [[ -n "${OPENCLAW_INSTALL_LATEST_OUT:-}" ]]; then
   printf "%s" "$LATEST_VERSION" > "${OPENCLAW_INSTALL_LATEST_OUT:-}"
 fi
-INSTALLED_VERSION="$("$CLI_NAME" --version 2>/dev/null | head -n 1 | tr -d '\r')"
-echo "cli=$CLI_NAME installed=$INSTALLED_VERSION expected=$LATEST_VERSION"
+INSTALLED_VERSION="$("$CMD_PATH" --version 2>/dev/null | head -n 1 | tr -d '\r')"
+echo "cli=$CLI_NAME cmd=$CMD_PATH installed=$INSTALLED_VERSION expected=$LATEST_VERSION"
 
 if [[ "$INSTALLED_VERSION" != "$LATEST_VERSION" ]]; then
   echo "ERROR: expected ${CLI_NAME}@${LATEST_VERSION}, got ${CLI_NAME}@${INSTALLED_VERSION}" >&2
@@ -68,6 +99,6 @@ if [[ "$INSTALLED_VERSION" != "$LATEST_VERSION" ]]; then
 fi
 
 echo "==> Sanity: CLI runs"
-"$CLI_NAME" --help >/dev/null
+"$CMD_PATH" --help >/dev/null
 
 echo "OK"
