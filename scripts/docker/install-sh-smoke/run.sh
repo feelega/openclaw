@@ -60,6 +60,13 @@ resolve_cli_path() {
     return 0
   fi
 
+  # The installer may update shell init files; check via a login shell too.
+  candidate="$(bash -lc 'command -v "$1" 2>/dev/null' _ "$cli_name" | head -n 1 | tr -d '\r' || true)"
+  if [[ -n "$candidate" && -x "$candidate" ]]; then
+    printf "%s" "$candidate"
+    return 0
+  fi
+
   local npm_prefix=""
   npm_prefix="$(npm config get prefix 2>/dev/null || true)"
   if [[ -n "$npm_prefix" && "$npm_prefix" != "undefined" && -x "$npm_prefix/bin/$cli_name" ]]; then
