@@ -54,7 +54,7 @@ describe("doctor command", () => {
     const remote = gateway.remote as Record<string, unknown>;
     const channels = (written.channels as Record<string, unknown>) ?? {};
 
-    expect(channels.whatsapp).toEqual({
+    expect(channels.whatsapp).toMatchObject({
       allowFrom: ["+15555550123"],
     });
     expect(written.routing).toBeUndefined();

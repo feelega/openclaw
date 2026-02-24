@@ -391,7 +391,8 @@ async function assertNoHostSymlinkEscape(params: {
       if (params.allowFinalSymlink && isLast) {
         return;
       }
-      const symlinkTarget = await tryRealpath(current);
+      const linkTarget = await fs.readlink(current);
+      const symlinkTarget = path.resolve(path.dirname(current), linkTarget.toString());
       if (!isPathInside(rootReal, symlinkTarget)) {
         throw new Error(`Symlink escapes sandbox mount root (${rootReal}): ${current}`);
       }
