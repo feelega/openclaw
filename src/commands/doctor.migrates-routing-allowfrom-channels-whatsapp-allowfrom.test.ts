@@ -57,6 +57,7 @@ describe("doctor command", () => {
     expect(channels.whatsapp).toMatchObject({
       allowFrom: ["+15555550123"],
     });
+
     expect(written.routing).toBeUndefined();
     expect(remote.token).toBe("legacy-remote-token");
     expect(auth).toBeUndefined();
